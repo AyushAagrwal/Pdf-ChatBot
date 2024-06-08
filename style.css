@@ -1,0 +1,59 @@
+/* style.css */
+
+body {
+  font-family: Arial, sans-serif;
+}
+
+.stApp {
+  background-color: #3c6bca;
+  color: #333;
+}
+
+.stFileUploader {
+  border: 2px dashed #ccc;
+  padding: 20px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.stButton > button {
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  text-align: center;
+  display: inline-block;
+  font-size: 16px;
+  margin: 4px 2px;
+  cursor: pointer;
+  border-radius: 5px;
+}
+
+.stButton > button:hover {
+  background-color: #45a049;
+}
+
+.stChatMessage {
+  border-radius: 5px;
+  padding: 10px;
+  margin: 10px 0;
+}
+
+.stChatMessage.assistant {
+  background-color: #d9edf7;
+  color: #31708f;
+}
+
+.stChatMessage.user {
+  background-color: #f9f9f9;
+  color: #333;
+}
+
+.stChatInput {
+  padding: 10px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 10px;
+}
