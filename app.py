@@ -11,6 +11,8 @@ from langchain.prompts import PromptTemplate
 from dotenv import load_dotenv
 import warnings
 import fitz  # PyMuPDF
+from textblob import TextBlob
+
 
 
 warnings.filterwarnings("ignore")
@@ -93,6 +95,18 @@ def get_vector_store(chunks):
     vector_store = FAISS.from_texts(chunks, embedding=embeddings)
     vector_store.save_local("faiss_index")
 
+# Function to correct spelling mistakes in user input
+def correct_spelling(user_input):
+    # Create a TextBlob object
+    blob = TextBlob(user_input)
+    
+    # Correct the spelling
+    corrected_text = blob.correct()
+    
+    return str(corrected_text)
+
+
+
 # Create a conversational chain
 def get_conversational_chain():
     prompt_template = """
@@ -119,13 +133,16 @@ def clear_chat_history():
 
 # Handle user input and provide a response
 def user_input(user_question):
+    # Correct spelling of user input
+    corrected_question = correct_spelling(user_question)
+
     embeddings = GoogleGenerativeAIEmbeddings(
         model="models/embedding-001")  # type: ignore
     new_db = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
-    docs = new_db.similarity_search(user_question)
+    docs = new_db.similarity_search(corrected_question)
     chain = get_conversational_chain()
     response = chain(
-        {"input_documents": docs, "question": user_question}, return_only_outputs=True)
+        {"input_documents": docs, "question": corrected_question}, return_only_outputs=True)
     return response
 
 # Main function to run the Streamlit app
@@ -182,13 +199,15 @@ def main():
         prompt = st.chat_input("Type your question here")
 
         if prompt:
-            st.session_state.messages.append({"role": "user", "content": prompt})
+            # Correct spelling of user input
+            corrected_prompt = correct_spelling(prompt)
+            st.session_state.messages.append({"role": "user", "content": corrected_prompt})
             with st.chat_message("user"):
-                st.write(prompt)
+                st.write(corrected_prompt)
 
             with st.chat_message("assistant"):
                 with st.spinner("Thinking..."):
-                    response = user_input(prompt)
+                    response = user_input(corrected_prompt)
                     placeholder = st.empty()
                     full_response = ''
                     for item in response['output_text']:
