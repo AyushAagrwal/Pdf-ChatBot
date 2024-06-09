@@ -10,6 +10,8 @@ from langchain.chains.question_answering import load_qa_chain
 from langchain.prompts import PromptTemplate
 from dotenv import load_dotenv
 import warnings
+import fitz  # PyMuPDF
+
 
 warnings.filterwarnings("ignore")
 
@@ -41,6 +43,41 @@ def get_pdf_text(pdf_doc):
         st.session_state.error_message = f"An unexpected error occurred while reading {pdf_doc.name}: {e}"
         return None
     return text
+
+# Convert PDF to text using PyMuPDF (fitz)
+def pdf_to_text(pdf_path, txt_path):
+    document = fitz.open(pdf_path)
+    with open(txt_path, 'w', encoding='utf-8') as text_file:
+        for page_num in range(len(document)):
+            page = document.load_page(page_num)
+            text = page.get_text()
+            text_file.write(text)
+            text_file.write('\n' + '-'*80 + '\n')
+    print(f'Text extracted from {pdf_path} and saved to {txt_path}')
+    return txt_path
+
+
+# Fallback method to handle PDF extraction errors
+def get_pdf_text_with_fallback(pdf_doc):
+    raw_text = get_pdf_text(pdf_doc)
+    if raw_text is None:
+        # Fallback to PyMuPDF extraction
+        st.write("Error extracting text from PDF. Trying an alternative method, please wait...")
+        try:
+            with open(f"temp_{pdf_doc.name}", "wb") as f:
+                f.write(pdf_doc.getbuffer())
+            txt_path = f"temp_{pdf_doc.name}.txt"
+            pdf_to_text(f"temp_{pdf_doc.name}", txt_path)
+            with open(txt_path, 'r', encoding='utf-8') as file:
+                raw_text = file.read()
+            if not raw_text.strip():
+                st.session_state.error_message = "No text extracted from the uploaded PDF."
+                return None
+        except Exception as e:
+            st.session_state.error_message = f"An error occurred during fallback extraction: {e}"
+            return None
+    return raw_text
+
 
 # Split text into chunks
 def get_text_chunks(text):
@@ -111,7 +148,7 @@ def main():
 
         # Process PDF text
         with st.spinner("Processing PDF..."):
-            raw_text = get_pdf_text(pdf_doc)
+            raw_text = get_pdf_text_with_fallback(pdf_doc)
             if raw_text:
                 text_chunks = get_text_chunks(raw_text)
                 get_vector_store(text_chunks)
@@ -121,6 +158,7 @@ def main():
                 st.session_state.error_message = None
             else:
                 st.session_state.input_disabled = True
+
 
     # Display error message if any
     if st.session_state.get("error_message"):
