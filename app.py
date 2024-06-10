@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 import warnings
 import fitz  # PyMuPDF
 from textblob import TextBlob
-
+import re
 
 
 warnings.filterwarnings("ignore")
@@ -55,7 +55,7 @@ def pdf_to_text(pdf_path, txt_path):
             text = page.get_text()
             text_file.write(text)
             text_file.write('\n' + '-'*80 + '\n')
-    print(f'Text extracted from {pdf_path} and saved to {txt_path}')
+    # print(f'Text extracted from {pdf_path} and saved to {txt_path}')
     return txt_path
 
 
@@ -95,18 +95,6 @@ def get_vector_store(chunks):
     vector_store = FAISS.from_texts(chunks, embedding=embeddings)
     vector_store.save_local("faiss_index")
 
-# Function to correct spelling mistakes in user input
-def correct_spelling(user_input):
-    # Create a TextBlob object
-    blob = TextBlob(user_input)
-    
-    # Correct the spelling
-    corrected_text = blob.correct()
-    
-    return str(corrected_text)
-
-
-
 # Create a conversational chain
 def get_conversational_chain():
     prompt_template = """
@@ -144,6 +132,29 @@ def user_input(user_question):
     response = chain(
         {"input_documents": docs, "question": corrected_question}, return_only_outputs=True)
     return response
+
+
+# Correct spelling of user input while excluding certain words
+def correct_spelling(user_input):
+    exclude_words = load_exclude_words()
+    words = user_input.split()
+    corrected_words = []
+
+    for word in words:
+        # Check if the word matches any of the excluded words (case insensitive)
+        if any(re.fullmatch(excluded_word, word, re.IGNORECASE) for excluded_word in exclude_words):
+            corrected_words.append(word)
+        else:
+            blob = TextBlob(word)
+            corrected_words.append(str(blob.correct()))
+
+    return " ".join(corrected_words)
+
+# Load words to exclude from an external file
+def load_exclude_words():
+    with open("exclude_words.txt", "r") as file:
+        exclude_words = file.read().splitlines()
+    return exclude_words
 
 # Main function to run the Streamlit app
 def main():
